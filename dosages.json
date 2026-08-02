@@ -1,0 +1,192 @@
+{
+  "source": {
+    "guide_officiel": "AgriWinners",
+    "produits": "A4S",
+    "mention_app": "Protocole officiel AgriWinners — dosage exact pour votre culture, à votre stade.",
+    "contact_officiel": "Pour toute question de posologie, contactez l'accompagnement AgriWinners via WhatsApp.",
+    "annee": 2026,
+    "slogan": "Des racines plus fortes. Des récoltes plus grandes."
+  },
+
+  "4tree": {
+    "nom": "4Tree",
+    "role": "Stimulateur de croissance végétale. Optimise la croissance, la floraison et le rendement.",
+    "conditionnement": [
+      { "unite": "1 paquet", "equivalence": "10 sachets" },
+      { "unite": "1 sachet", "equivalence": "6 hectares / 800 L (ou 3 Ha / 800L selon lot)" },
+      { "unite": "1 sachet", "equivalence": "40 cuillerées" },
+      { "unite": "1 cuillerée", "equivalence": "20 litres d'eau" }
+    ],
+    "regles_generales_par_famille": {
+      "maraichere": { "label": "Maraîchères (potager)", "dose": "1 cuillerée / 20L d'eau", "frequence_jours": 7 },
+      "cereale_tubercule": { "label": "Céréales et tubercules", "dose": "2 cuillerées / 20L d'eau", "frequence_jours": 15 },
+      "rente_fruitiere": { "label": "Cultures de rente et fruitières", "dose": "2 cuillerées / 20L d'eau", "frequence_jours": 30 },
+      "cycle_court": { "label": "Cultures à cycle court (melons, courges)", "dose": "1 cuillerée / 20L d'eau", "frequence_jours": 10 }
+    },
+    "semis_trempage": "Pour céréales (maïs, riz) et tubercules (manioc, igname) : tremper 1 à 2 cuillerées de 4Tree dans 20L d'eau pendant 20 à 30 minutes avant de planter. Tout planter le même jour après trempage.",
+    "securite": "Arrêter la pulvérisation quand la plante porte des fleurs, et lorsqu'il pleut ou vente fort. Reprendre l'application après la pluie. La solution mélangée s'utilise le jour même, elle ne se conserve pas jusqu'au lendemain.",
+
+    "cultures": {
+      "tomate": { "label": "Tomate", "famille": "maraichere", "detail": true, "etapes": [
+        { "nom": "1ère – 2e application (7-15j)", "dose": "1/2 à 1 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "Floraison (40j)", "dose": null, "frequence_jours": null, "alerte": "Ne pas pulvériser" },
+        { "nom": "Après récolte", "dose": "1 cuillerée / 20L", "frequence_jours": 15, "alerte": null }
+      ]},
+      "concombre": { "label": "Concombre", "famille": "maraichere", "detail": true, "etapes": [
+        { "nom": "Germination – fructification", "dose": "1/2 à 1 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "Phase de floraison", "dose": null, "frequence_jours": null, "alerte": "Arrêter la pulvérisation" }
+      ]},
+      "piment": { "label": "Piment", "famille": "maraichere", "detail": true, "etapes": [
+        { "nom": "Germination – 4-5 feuilles", "dose": "1/2 à 1 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "Floraison (50-80j)", "dose": null, "frequence_jours": null, "alerte": "Ne pas pulvériser sur les fleurs" },
+        { "nom": "Production (90-180j)", "dose": "1 cuillerée / 20L", "frequence_jours": 7, "alerte": null }
+      ]},
+      "gombo": { "label": "Gombo", "famille": "maraichere", "detail": false },
+      "aubergine": { "label": "Aubergine", "famille": "maraichere", "detail": false },
+      "salade": { "label": "Salade", "famille": "maraichere", "detail": false },
+
+      "mais": { "label": "Maïs", "famille": "cereale_tubercule", "detail": true, "etapes": [
+        { "nom": "1er – 3e passage (15-45j)", "dose": "1 à 2 cuillerées / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Après sortie des épis", "dose": "Continuer la pulvérisation", "frequence_jours": 15, "alerte": null }
+      ]},
+      "riz": { "label": "Riz", "famille": "cereale_tubercule", "detail": true, "etapes": [
+        { "nom": "Germination – reproduction", "dose": "1 à 2 cuillerées / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Période de floraison", "dose": null, "frequence_jours": null, "alerte": "Ne pas traiter" }
+      ]},
+      "arachide": { "label": "Arachide", "famille": "cereale_tubercule", "detail": true, "etapes": [
+        { "nom": "Début germination", "dose": "1/2 cuillerée / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Croissance – accumulation", "dose": "1 cuillerée / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Après 70 jours", "dose": null, "frequence_jours": null, "alerte": "Arrêter la pulvérisation" }
+      ]},
+      "gingembre": { "label": "Gingembre", "famille": "cereale_tubercule", "detail": true, "etapes": [
+        { "nom": "Germination – croissance", "dose": "1 cuillerée / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Accumulation – maturité", "dose": "2 cuillerées / 20L", "frequence_jours": 15, "alerte": null }
+      ]},
+      "mil": { "label": "Mil", "famille": "cereale_tubercule", "detail": false },
+      "sorgho": { "label": "Sorgho", "famille": "cereale_tubercule", "detail": false },
+      "igname": { "label": "Igname", "famille": "cereale_tubercule", "detail": false },
+      "manioc": { "label": "Manioc", "famille": "cereale_tubercule", "detail": false },
+      "taro": { "label": "Taro", "famille": "cereale_tubercule", "detail": false },
+
+      "cafe": { "label": "Café", "famille": "rente_fruitiere", "detail": true, "etapes": [
+        { "nom": "15 jours après plantation", "dose": "1 cuillerée / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "16 mois et plus", "dose": "2 cuillerées / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Floraison du caféier", "dose": null, "frequence_jours": null, "alerte": "Ne pas pulvériser" },
+        { "nom": "Caféier portant des fruits", "dose": "2 cuillerées / 20L", "frequence_jours": 15, "alerte": null }
+      ]},
+      "cacao": { "label": "Cacao", "famille": "rente_fruitiere", "detail": true, "etapes": [
+        { "nom": "15 jours après plantation", "dose": "1 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "Cacaoyer 2-18 mois", "dose": "1 cuillerée / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Cacaoyer 2 ans et plus", "dose": "2 cuillerées / 20L", "frequence_jours": 15, "alerte": null }
+      ]},
+      "oranger": { "label": "Oranger", "famille": "rente_fruitiere", "detail": true, "etapes": [
+        { "nom": "0-1 an", "dose": "1 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "1-3 ans", "dose": "2 cuillerées / 20L", "frequence_jours": 15, "alerte": null },
+        { "nom": "Période de floraison", "dose": null, "frequence_jours": null, "alerte": "Ne pas utiliser" },
+        { "nom": "Oranger avec fruits", "dose": "1 cuillerée / 20L", "frequence_jours": 7, "alerte": null }
+      ]},
+      "poivre_noir": { "label": "Poivre noir", "famille": "rente_fruitiere", "detail": true, "etapes": [
+        { "nom": "Plantation – croissance", "dose": "1/2 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "Croissance avancée", "dose": "1 cuillerée / 20L", "frequence_jours": 10, "alerte": null }
+      ]},
+      "palmier_a_huile": { "label": "Palmier à huile", "famille": "rente_fruitiere", "detail": true, "etapes": [
+        { "nom": "1-2 ans", "dose": "3 cuillerées / traitement", "frequence_jours": 15, "alerte": null },
+        { "nom": "3 ans et plus", "dose": "4 cuillerées / traitement", "frequence_jours": 15, "alerte": null }
+      ]},
+      "hevea": { "label": "Hévéa", "famille": "rente_fruitiere", "detail": false },
+      "avocatier": { "label": "Avocatier", "famille": "rente_fruitiere", "detail": false },
+      "manguier": { "label": "Manguier", "famille": "rente_fruitiere", "detail": false },
+
+      "pasteque": { "label": "Pastèque", "famille": "cycle_court", "detail": true, "etapes": [
+        { "nom": "1er passage (7j)", "dose": "1/2 cuillerée / 20L", "frequence_jours": 7, "alerte": null },
+        { "nom": "2e passage (15j)", "dose": "1 cuillerée / 20L", "frequence_jours": 8, "alerte": null },
+        { "nom": "3e passage (20j)", "dose": "1 cuillerée / 20L", "frequence_jours": 5, "alerte": null },
+        { "nom": "4e passage (30j)", "dose": "1 cuillerée / 20L", "frequence_jours": 10, "alerte": null },
+        { "nom": "40e jour — démarrage floraison", "dose": null, "frequence_jours": null, "alerte": "Ne pas pulvériser" },
+        { "nom": "5e passage — soins post-production", "dose": "1 cuillerée / 20L", "frequence_jours": null, "alerte": null }
+      ]},
+      "melon": { "label": "Melon", "famille": "cycle_court", "detail": false },
+      "cantaloup": { "label": "Cantaloup", "famille": "cycle_court", "detail": false }
+    },
+
+    "grands_arbres_note": "Pour les grands arbres (café, cacao, hévéa, palmier, avocatier, manguier, oranger) : pulvériser les feuilles. Si les feuilles sont inaccessibles, arroser le produit sur le tronc de l'arbre."
+  },
+
+  "4soil_plus": {
+    "nom": "4Soil Plus",
+    "role": "Amendement organique naturel enrichi en minéraux pour revitaliser et assainir les sols dégradés ou compactés.",
+    "avantages": [
+      "Régénère le sol appauvri",
+      "Améliore la structure du sol (plus aéré, plus meuble)",
+      "Optimise la rétention d'eau",
+      "Favorise la vie microbienne du sol",
+      "Neutralise les toxines (acidité, sel, résidus chimiques)"
+    ],
+    "conditionnement": [
+      { "unite": "1 cuillerée", "equivalence": "20 litres d'eau" },
+      { "unite": "1 sachet (100g)", "equivalence": "2 hectares" },
+      { "unite": "1 boîte", "equivalence": "4 sachets de 100g" },
+      { "unite": "1 boîte complète", "equivalence": "8 hectares" }
+    ],
+    "etapes": [
+      { "nom": "1. Première application", "quand": "Début de traitement", "action": "1 cuillerée / 20L d'eau, appliquer sur le sol" },
+      { "nom": "2. Sols très pauvres", "quand": "2 semaines après l'étape 1", "action": "Renouveler le traitement pour restaurer rapidement la fertilité" },
+      { "nom": "3. Entretien du sol", "quand": "Chaque mois", "action": "1 application mensuelle pour maintenir un sol fertile" }
+    ],
+    "note": "4Soil Plus est l'allié idéal AVANT toute culture ou en récupération de sol appauvri. Traiter le sol avant de planter donne les meilleurs résultats.",
+    "frequence_entretien_jours": 30
+  },
+
+  "booster": {
+    "nom": "Booster",
+    "role": "Extrait de chitosane pur qui stimule le système immunitaire des plantes et les protège des maladies.",
+    "avantages": [
+      "Renforcement du système immunitaire des plantes",
+      "Réduction de la dépendance aux produits chimiques",
+      "Réparation et régénération des tissus végétaux",
+      "Stimulation de la croissance et de la floraison",
+      "Protection préventive et durable"
+    ],
+    "conditionnement": [
+      { "unite": "5 ml", "equivalence": "20 litres d'eau" },
+      { "unite": "1 tube", "equivalence": "250 ml" },
+      { "unite": "1 tube", "equivalence": "4 à 6 hectares" }
+    ],
+    "dose_fixe": "5 ml / 20 litres d'eau",
+    "mode_utilisation": "Le bouchon du tube de Booster est gradué pour toutes les cultures. Diluer d'abord 5 ml de Booster dans 20 litres d'eau, puis y ajouter ensuite la cuillerée de 4Tree selon le dosage recommandé pour la culture concernée.",
+    "securite": "Ordre de mélange important : diluer d'abord le Booster (5ml / 20L d'eau), PUIS ajouter la cuillerée de 4Tree selon le dosage de la culture concernée. Ne jamais inverser l'ordre de dilution.",
+    "combinable_4tree": true
+  },
+
+  "synergie": {
+    "texte": [
+      "4Soil Plus : prépare et régénère le sol AVANT la plantation.",
+      "4Tree : stimule la croissance de la plante PENDANT tout le cycle.",
+      "Booster : protège et renforce la plante contre maladies et stress."
+    ],
+    "phrase_finale": "Un dosage respecté, une fréquence bien suivie : c'est la garantie d'une récolte abondante et d'un sol durablement fertile."
+  },
+
+  "prix_produits": {
+    "note_app": "Prix des produits physiques A4S — pas le prix de l'application. Achetez-les via AgriWinners et l'outil de dosage vous est offert.",
+    "produits": [
+      {
+        "nom": "4Tree",
+        "prix_principal": "15 000 FCFA",
+        "sous_lignes": ["le sachet (tarif membre)", "90 000 FCFA le carton de 10", "150 000 FCFA hors réseau"]
+      },
+      {
+        "nom": "4Soil Plus",
+        "prix_principal": "50 000 FCFA",
+        "sous_lignes": ["tarif membre", "60 000 FCFA hors réseau"]
+      },
+      {
+        "nom": "Booster",
+        "prix_principal": "25 000 FCFA",
+        "sous_lignes": ["tarif membre", "30 000 FCFA hors réseau"]
+      }
+    ],
+    "livraison": "AgriWinners livre partout en Afrique de l'Ouest et en Afrique Centrale. Livraison sécurisée, aux frais du client.",
+    "whatsapp_url": "https://wa.me/2250797052449?text=Bonjour%2C%20je%20voudrais%20commander%20des%20produits%20A4S%20(4Tree%2C%204Soil%20Plus%2C%20Booster)."
+  }
+}
