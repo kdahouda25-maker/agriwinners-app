@@ -268,6 +268,18 @@
 
       <div class="card ref-card" id="cardSoil"></div>
       <div class="card ref-card" id="cardBooster"></div>
+
+      <div class="card" id="cardCalculSuperficie">
+        <h4>📐 Calculer pour votre superficie</h4>
+        <p class="meta">Entrez la superficie de votre parcelle (en hectares) pour estimer la quantité de produits à acheter.</p>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <input type="number" id="inputSuperficieHa" placeholder="Ex : 2.5" min="0" step="0.1" style="flex:1;">
+          <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="calculerSuperficie()">Calculer</button>
+        </div>
+        <div id="resultatSuperficie" style="margin-top:14px;"></div>
+        <div class="fallback-note" style="margin-top:10px;">⚠️ Ces quantités sont des <strong>fourchettes</strong>, pas des chiffres exacts — la couverture réelle varie selon le lot, le feuillage et la culture. En cas de doute, achetez plutôt un peu plus que moins, et contactez l'accompagnement AgriWinners avant un premier grand passage.</div>
+      </div>
+
       <div class="fallback-note" id="noteSecurite"></div>
     </section>
 
@@ -713,6 +725,51 @@ function marquerTraite() {
   toast("Traitement enregistré ✓");
   const freq = frequenceCourante(parcelle.culture, parcelle.etapeIndex);
   notifierSiPossible("Traitement enregistré", `${parcelle.nom} — prochain rappel ${freq ? "dans " + freq + " jours" : "à définir (étape sans fréquence fixe)"}.`);
+}
+
+/* ---------- Calculateur de superficie (fourchettes, jamais un chiffre unique) ---------- */
+// Couverture par unité, en hectares. Sources :
+// - 4Tree : 3 à 6 Ha/sachet, générique toutes cultures — confirmé par le fournisseur (pas un chiffre unique).
+// - Booster : 4 à 6 Ha/tube — donnée existante, PAS reconfirmée récemment, affichée comme telle.
+// - 4Soil Plus : 2 Ha/sachet de 100g — fixe, non contesté.
+const SUPERFICIE_REF = {
+  tree: { haParUniteMin: 3, haParUniteMax: 6, unite: "sachet", confirme: true },
+  booster: { haParUniteMin: 4, haParUniteMax: 6, unite: "tube", confirme: false },
+  soil: { haParUnite: 2, unite: "sachet de 100g", confirme: true }
+};
+
+function calculerSuperficie() {
+  const input = document.getElementById("inputSuperficieHa");
+  const resultEl = document.getElementById("resultatSuperficie");
+  const S = parseFloat(input.value);
+
+  if (!S || S <= 0) {
+    resultEl.innerHTML = `<p class="meta" style="color:var(--danger);">Entrez une superficie valide (en hectares).</p>`;
+    return;
+  }
+
+  const treeMin = S / SUPERFICIE_REF.tree.haParUniteMax;
+  const treeMax = S / SUPERFICIE_REF.tree.haParUniteMin;
+  const boostMin = S / SUPERFICIE_REF.booster.haParUniteMax;
+  const boostMax = S / SUPERFICIE_REF.booster.haParUniteMin;
+  const soilQte = Math.ceil(S / SUPERFICIE_REF.soil.haParUnite);
+
+  const fmt = (n) => n.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+
+  resultEl.innerHTML = `
+    <div class="dose-row">
+      <span class="produit">4Tree</span>
+      <span class="val">${fmt(treeMin)} à ${fmt(treeMax)} sachet(s) — achetez ${Math.ceil(treeMax)}</span>
+    </div>
+    <div class="dose-row">
+      <span class="produit">Booster <span class="badge-detail off">à confirmer</span></span>
+      <span class="val">${fmt(boostMin)} à ${fmt(boostMax)} tube(s) — achetez ${Math.ceil(boostMax)}</span>
+    </div>
+    <div class="dose-row">
+      <span class="produit">4Soil Plus</span>
+      <span class="val">${soilQte} sachet(s) de 100g</span>
+    </div>
+  `;
 }
 
 /* ---------- Cartes de référence 4Soil Plus / Booster (universelles) ---------- */

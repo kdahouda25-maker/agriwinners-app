@@ -1,6 +1,6 @@
 // Service worker AgriWinners — mise en cache pour usage hors connexion.
 // Incrémente CACHE_NAME à chaque mise à jour de contenu pour forcer le rafraîchissement.
-const CACHE_NAME = "agriwinners-v7";
+const CACHE_NAME = "agriwinners-v10";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
