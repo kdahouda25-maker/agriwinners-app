@@ -211,7 +211,7 @@
   <input type="text" id="gateInputCle" placeholder="Ex : ABC-123-XYZ-789">
   <button class="btn-primary" id="gateBtnActiver" onclick="activerLicence()">Activer</button>
   <p class="gate-error" id="gateErreur"></p>
-  <p class="gate-help">Pas encore de clé ? <a href="https://wa.me/2250797052449?text=Bonjour%2C%20je%20voudrais%20ma%20cl%C3%A9%20d%27acc%C3%A8s%20Boost%20Agriculture." target="_blank">Écrivez-nous sur WhatsApp</a></p>
+  <p class="gate-help">Pas encore de clé ? <a href="https://wa.me/2250707296215?text=Bonjour%2C%20je%20voudrais%20ma%20cl%C3%A9%20d%27acc%C3%A8s%20Boost%20Agriculture." target="_blank">Écrivez-nous sur WhatsApp</a></p>
 </div>
 
 <div class="install-banner" id="installBanner">
@@ -240,6 +240,11 @@
 
     <!-- VUE ACCUEIL -->
     <section class="view active" id="view-accueil">
+      <div class="card" id="cardNotifStatus" style="margin-bottom:14px;">
+        <h4 style="margin:0 0 6px;">🔔 Rappels dans l'app</h4>
+        <p class="meta" id="notifStatusText">Activez les rappels pour être averti ici quand un traitement est dû (fonctionne quand l'app est ouverte). Pour un rappel même app fermée, utilisez "📅 Rappel calendrier" sur chaque parcelle.</p>
+        <button class="btn-outline" id="btnActiverNotif" onclick="activerNotifications()" style="margin-top:8px;">Activer les rappels</button>
+      </div>
       <div id="listeParcelles"></div>
       <div class="empty" id="emptyAccueil" style="display:none;">
         <div class="big">🌱</div>
@@ -331,7 +336,7 @@
       <div class="card">
         <h3>Un doute ?</h3>
         <p class="meta">Contactez l'équipe directement, avant d'acheter.</p>
-        <a class="btn btn-outline" style="text-decoration:none;" href="https://wa.me/2250797052449" target="_blank">💬 Écrire sur WhatsApp</a>
+        <a class="btn btn-outline" style="text-decoration:none;" href="https://wa.me/2250707296215" target="_blank">💬 Écrire sur WhatsApp</a>
       </div>
     </section>
   </main>
@@ -399,6 +404,7 @@ async function init() {
   renderCardsReference();
   renderPrixProduits();
   render();
+  majEtatNotif();
   verifierRappelsAuOuverture();
 }
 
@@ -578,6 +584,7 @@ function render() {
       <h3>${p.nom} <span class="badge-detail ${culture && culture.detail ? "on" : "off"}">${culture && culture.detail ? "détaillé" : "règle famille"}</span></h3>
       <p class="meta">${culture ? culture.label : "?"} — ${etapeLabel(p)}</p>
       <button class="btn-outline" onclick="allerDosage('${p.id}')">Voir le dosage</button>
+      ${p.prochainTraitement ? `<button class="btn-outline" onclick="ajouterRappelCalendrier('${p.id}')">📅 Rappel calendrier</button>` : ""}
       <button class="btn-danger-text" onclick="supprimerParcelle('${p.id}')">Supprimer cette parcelle</button>
     `;
     liste.appendChild(div);
@@ -848,14 +855,117 @@ function verifierRappelsAuOuverture() {
   }
 }
 function notifierSiPossible(titre, corps) {
+  // Ne JAMAIS demander la permission ici : un navigateur bloque silencieusement
+  // (et parfois définitivement) une demande de permission qui ne vient pas
+  // d'un clic direct de l'utilisateur. La demande se fait uniquement via le
+  // bouton "Activer les rappels" (voir activerNotifications ci-dessous).
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
     new Notification(titre, { body: corps, icon: "icons/icon-192.png" });
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(p => {
-      if (p === "granted") new Notification(titre, { body: corps, icon: "icons/icon-192.png" });
-    });
   }
+}
+
+/* ---------- Statut des rappels dans l'app (permission Notification) ---------- */
+function majEtatNotif() {
+  const btn = document.getElementById("btnActiverNotif");
+  const txt = document.getElementById("notifStatusText");
+  if (!btn || !txt) return;
+  if (!("Notification" in window)) {
+    btn.style.display = "none";
+    txt.textContent = "Les rappels dans l'app ne sont pas pris en charge par ce navigateur. Utilisez plutôt \"📅 Rappel calendrier\" sur chaque parcelle.";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    btn.textContent = "✅ Rappels activés";
+    btn.disabled = true;
+    txt.textContent = "Vous serez averti ici à l'ouverture de l'app quand un traitement est dû. Pour un rappel même app fermée, utilisez aussi \"📅 Rappel calendrier\" sur chaque parcelle.";
+  } else if (Notification.permission === "denied") {
+    btn.textContent = "🔕 Rappels bloqués par le navigateur";
+    btn.disabled = true;
+    txt.textContent = "Les notifications sont bloquées pour cette app dans les réglages de votre navigateur/téléphone. Utilisez plutôt \"📅 Rappel calendrier\" sur chaque parcelle — plus fiable de toute façon.";
+  } else {
+    btn.textContent = "Activer les rappels";
+    btn.disabled = false;
+    txt.style.removeProperty && txt.style.removeProperty("color");
+  }
+}
+
+function activerNotifications() {
+  if (!("Notification" in window)) return;
+  Notification.requestPermission().then(() => {
+    majEtatNotif();
+    if (Notification.permission === "granted") {
+      toast("Rappels activés ✅");
+      verifierRappelsAuOuverture();
+    } else if (Notification.permission === "denied") {
+      toast("Rappels bloqués — utilisez le rappel calendrier sur chaque parcelle.");
+    }
+  });
+}
+
+/* ---------- Rappel calendrier (.ics) — fonctionne même app/navigateur fermés ---------- */
+function escICS(str) {
+  return String(str)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function formatICSDateTime(dateStr, heureHHMMSS) {
+  return dateStr.replace(/-/g, "") + "T" + heureHHMMSS;
+}
+
+function genererICS(parcelle) {
+  const dateStr = parcelle.prochainTraitement;
+  if (!dateStr) return null;
+  const culture = TREE.cultures[parcelle.culture];
+  const dtStart = formatICSDateTime(dateStr, "080000");
+  const dtEnd = formatICSDateTime(dateStr, "083000");
+  const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const uid = `boostagri-${parcelle.id}-${dateStr}@boostagriculture.app`;
+  const titre = escICS(`Traitement A4S — ${parcelle.nom}`);
+  const desc = escICS(`Protocole Boost Agriculture : ${culture ? culture.label : "?"} — ${etapeLabel(parcelle)}. Ouvrez l'app Boost Agriculture pour voir le dosage exact.`);
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Boost Agriculture//Rappel Traitement//FR",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:${titre}`,
+    `DESCRIPTION:${desc}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Rappel traitement Boost Agriculture",
+    "TRIGGER:-PT0M",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+
+function ajouterRappelCalendrier(id) {
+  const parcelle = DATA.parcelles.find(p => p.id === id);
+  if (!parcelle || !parcelle.prochainTraitement) {
+    toast("Pas de date de traitement définie pour cette parcelle.");
+    return;
+  }
+  const ics = genererICS(parcelle);
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rappel-${parcelle.nom.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "traitement"}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast("Rappel téléchargé — ouvrez-le pour l'ajouter à votre agenda 📅");
 }
 
 /* ---------- Toast ---------- */
