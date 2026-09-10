@@ -222,6 +222,10 @@
     Sur iPhone : appuyez sur <strong>Partager</strong> <span style="font-size:15px;">⬆️</span> en bas de Safari, puis <strong>« Sur l'écran d'accueil »</strong>.
   </div>
 
+  <div class="gate-install-note" id="gateInstallAndroidManualNote" style="display:none;">
+    Ouvrez le menu <strong>⋮</strong> de votre navigateur (en haut à droite de l'écran), puis appuyez sur <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.
+  </div>
+
   <button class="btn-outline btn-outline-light" id="gateInstallBtnContinuer">J'ai installé — Continuer</button>
 </div>
 
@@ -1219,7 +1223,19 @@ function afficherEtapeInstall() {
   document.getElementById("gateInstall").classList.remove("hidden");
   if (estIOS() && !dejaInstallee()) {
     document.getElementById("gateInstallIOSInstructions").style.display = "block";
+    return;
   }
+  // Android/autres : si le navigateur ne propose pas le bouton natif d'installation
+  // (beforeinstallprompt) dans la seconde, on affiche des instructions manuelles —
+  // sinon le client reste bloqué devant un bouton "Continuer" sans savoir comment
+  // installer réellement l'app.
+  setTimeout(() => {
+    const btnAndroid = document.getElementById("gateInstallBtnAndroid");
+    const gateEncoreActif = !document.getElementById("gateInstall").classList.contains("hidden");
+    if (gateEncoreActif && btnAndroid && btnAndroid.style.display === "none") {
+      document.getElementById("gateInstallAndroidManualNote").style.display = "block";
+    }
+  }, 1000);
 }
 function afficherGateLicence() {
   document.getElementById("gateInstall").classList.add("hidden");
