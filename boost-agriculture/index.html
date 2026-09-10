@@ -1,54 +1,1269 @@
-// Service worker Boost Agriculture — mise en cache pour usage hors connexion.
-// Incrémente CACHE_NAME à chaque mise à jour de contenu pour forcer le rafraîchissement.
-const CACHE_NAME = "boostagri-v5";
-const ASSETS = [
-  "./index.html",
-  "./manifest.json",
-  "./dosages.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/logo-header.png",
-  "./authenticite/4soil.jpg",
-  "./authenticite/4tree.jpg",
-  "./authenticite/booster.jpg"
-];
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Boost Agriculture — Protocole A4S</title>
+<meta name="theme-color" content="#1a6232">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --dark: #1a6232;
+    --mid: #2f8f4e;
+    --pale: #f4f6ef;
+    --orange: #c99a3a;
+    --border: #dde6d7;
+    --text: #23282b;
+    --muted: #708070;
+    --danger: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--pale);
+    color: var(--text);
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 76px; }
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
-});
+  header.top {
+    background: var(--dark); color: #fff; padding: 16px 18px;
+    display: flex; align-items: center; gap: 10px;
+    position: sticky; top: 0; z-index: 5;
+  }
+  header.top .logo-box { background: #fff; border-radius: 9px; padding: 4px 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  header.top .logo-box img { width: 26px; height: 24px; display: block; object-fit: contain; }
+  header.top h1 { font-size: 17px; font-weight: 700; }
+  header.top p { font-size: 11px; opacity: 0.85; }
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
+  main { flex: 1; padding: 16px; }
 
-self.addEventListener("fetch", (event) => {
-  // Les appels à l'API de licence (POST) ne doivent jamais passer par le cache :
-  // toujours réseau direct, jamais de mise en cache d'une requête non-GET.
-  if (event.request.method !== "GET") {
-    event.respondWith(fetch(event.request));
+  .banner-demo {
+    background: #fff3e0; border: 1px solid var(--orange); color: #7a4a00;
+    border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 16px;
+  }
+
+  .card {
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(31,92,46,0.06);
+  }
+  .card h3 { font-size: 15px; color: var(--dark); margin-bottom: 4px; }
+  .card .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+
+  .status-pill {
+    display: inline-block; font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+    border-radius: 999px; margin-bottom: 8px;
+  }
+  .status-ok { background: #e6f4ea; color: var(--dark); }
+  .status-soon { background: #fff3e0; color: #8a5a00; }
+  .status-late { background: #fdecea; color: var(--danger); }
+  .status-none { background: #eee; color: #777; }
+
+  button, .btn {
+    font: inherit; cursor: pointer; border: none; border-radius: 10px;
+    padding: 12px 16px; font-weight: 700; font-size: 14px; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-primary { background: var(--dark); color: #fff; }
+  .btn-primary:active { background: var(--mid); }
+  .btn-outline { background: #fff; color: var(--dark); border: 1.5px solid var(--dark); }
+  .btn-danger-text { background: none; color: var(--danger); font-weight: 600; font-size: 13px; padding: 6px; width: auto; }
+
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--dark); margin: 10px 0 5px; }
+  select, input[type="text"], input[type="date"] {
+    width: 100%; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 9px;
+    font-size: 14px; background: #fff; color: var(--text); font-family: inherit;
+  }
+
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  .empty .big { font-size: 40px; margin-bottom: 10px; }
+
+  nav.bottom {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; background: #fff; border-top: 1px solid var(--border);
+    display: flex; z-index: 10;
+  }
+  nav.bottom button {
+    flex: 1; background: none; border-radius: 0; padding: 10px 4px 8px;
+    color: var(--muted); font-size: 10.5px; font-weight: 600; flex-direction: column; gap: 2px;
+  }
+  nav.bottom button .ic { font-size: 19px; }
+  nav.bottom button.active { color: var(--dark); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .dose-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  }
+  .dose-row:last-child { border-bottom: none; }
+  .dose-row .produit { font-weight: 700; color: var(--dark); }
+  .dose-row .val { color: var(--text); }
+  .dose-row .val.missing { color: var(--muted); font-style: italic; font-size: 12px; }
+
+  .hist-item { border-left: 3px solid var(--mid); padding: 8px 0 8px 12px; margin-bottom: 8px; }
+  .hist-item .date { font-size: 11.5px; color: var(--muted); }
+  .hist-item .title { font-size: 13.5px; font-weight: 600; }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none;
+    align-items: flex-end; justify-content: center; z-index: 20;
+  }
+  .modal-bg.active { display: flex; }
+  .modal {
+    background: #fff; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0;
+    padding: 20px 18px 26px; max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 17px; color: var(--dark); margin-bottom: 4px; }
+  .modal .close { text-align: right; }
+  .modal .close span { font-size: 13px; color: var(--muted); cursor: pointer; }
+
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--dark); color: #fff; padding: 10px 18px; border-radius: 30px;
+    font-size: 13px; z-index: 30; opacity: 0; transition: opacity 0.25s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  .install-banner {
+    background: var(--dark); color: #fff; padding: 12px 16px; font-size: 13px;
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .install-banner.show { display: flex; }
+  .install-banner button { width: auto; background: var(--orange); color: #1a1a1a; padding: 8px 14px; font-size: 12.5px; }
+
+  .alert-box {
+    background: #fdecea; border: 1px solid var(--danger); color: var(--danger);
+    border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 700; margin: 8px 0;
+  }
+  .fallback-note {
+    background: var(--pale); border: 1px dashed var(--mid); color: var(--dark);
+    border-radius: 10px; padding: 8px 10px; font-size: 12px; margin: 8px 0; line-height: 1.5;
+  }
+  .badge-detail {
+    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; margin-left: 6px; vertical-align: middle;
+  }
+  .badge-detail.on { background: #e6f4ea; color: var(--dark); }
+  .badge-detail.off { background: #fff3e0; color: #8a5a00; }
+  .ref-card h4 { font-size: 13.5px; color: var(--dark); margin-bottom: 6px; }
+  .ref-card .etape-line { font-size: 12.5px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .ref-card .etape-line:last-child { border-bottom: none; }
+  .ref-card .etape-line .n { font-weight: 700; color: var(--dark); }
+  .credit { font-size: 11px; color: var(--muted); text-align: center; margin-top: 14px; line-height: 1.5; padding: 0 10px; }
+
+  .culture-group-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    color: var(--muted); margin: 14px 0 6px;
+  }
+  .culture-pill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .culture-pill {
+    background: #e6f4ea; color: var(--dark); border: 1.5px solid transparent; border-radius: 10px;
+    padding: 11px 8px; font-weight: 700; font-size: 13.5px; text-align: center; cursor: pointer;
+  }
+  .culture-pill.selected { background: var(--dark); color: #fff; }
+  .culture-pill .star { color: var(--orange); }
+
+  .auth-product img {
+    width: 100%; max-width: 220px; display: block; margin: 0 auto 10px;
+    border-radius: 10px; border: 1px solid var(--border);
+  }
+  .auth-product h4 { font-size: 14.5px; color: var(--dark); text-align: center; margin-bottom: 6px; }
+  .auth-product p.meta { text-align: left; }
+
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .price-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--pale); }
+  .price-box:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .price-box h5 { margin: 0 0 6px; font-size: 13.5px; color: var(--dark); }
+  .price-box .price-main { font-size: 17px; font-weight: 800; color: var(--dark); }
+  .price-box .price-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .cta-whatsapp { background: #25D366; color: #fff; }
+
+  .gate-screen {
+    position: fixed; inset: 0; background: var(--dark); color: #fff; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px 26px; text-align: center;
+  }
+  .gate-screen.hidden { display: none; }
+  .gate-screen img.gate-logo { width: 60px; margin-bottom: 16px; border-radius: 14px; background:#fff; padding:8px; }
+  .gate-screen h2 { font-size: 19px; margin-bottom: 6px; }
+  .gate-screen p.sub { font-size: 13px; opacity: 0.88; margin-bottom: 22px; line-height: 1.55; max-width: 320px; }
+  .gate-screen input[type="text"] {
+    text-align: center; letter-spacing: 0.5px; max-width: 320px;
+  }
+  .gate-screen .btn-primary { margin-top: 14px; max-width: 320px; background: var(--orange); color: #1a1a1a; }
+  .gate-screen .btn-primary:disabled { opacity: 0.6; }
+  .gate-screen .gate-error { color: #ffb3a7; font-size: 13px; margin-top: 10px; min-height: 18px; max-width: 320px; }
+  .gate-screen .gate-help { margin-top: 30px; font-size: 12.5px; opacity: 0.8; }
+  .gate-screen .gate-help a { color: #fff; }
+  .gate-install-note {
+    text-align: left; background: rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 14px; margin-top: 16px; font-size: 13px; line-height: 1.6; max-width: 320px;
+  }
+  .gate-screen .btn-outline-light {
+    margin-top: 14px; max-width: 320px; background: transparent; border: 1.5px solid #fff; color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="gate-screen" id="gateInstall">
+  <img class="gate-logo" src="icons/icon-192.png" alt="Boost Agriculture">
+  <h2>Installez l'application</h2>
+  <p class="sub">Avant d'activer votre clé, installez Boost Agriculture sur votre téléphone. Ça prend 10 secondes, et l'app marche ensuite même sans connexion, directement au champ.</p>
+
+  <button class="btn-primary" id="gateInstallBtnAndroid" style="display:none; max-width:320px;">📲 Installer l'application</button>
+
+  <div class="gate-install-note" id="gateInstallIOSInstructions" style="display:none;">
+    Sur iPhone : appuyez sur <strong>Partager</strong> <span style="font-size:15px;">⬆️</span> en bas de Safari, puis <strong>« Sur l'écran d'accueil »</strong>.
+  </div>
+
+  <div class="gate-install-note" id="gateInstallAndroidManualNote" style="display:none;">
+    Ouvrez le menu <strong>⋮</strong> de votre navigateur (en haut à droite de l'écran), puis appuyez sur <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.
+  </div>
+
+  <button class="btn-outline btn-outline-light" id="gateInstallBtnContinuer">J'ai installé — Continuer</button>
+</div>
+
+<div class="gate-screen hidden" id="gateLicence">
+  <img class="gate-logo" src="icons/icon-192.png" alt="Boost Agriculture">
+  <h2 id="gateTitre">Accès à l'application</h2>
+  <p class="sub" id="gateSousTitre">Entrez la clé reçue après votre achat Boost Agriculture pour débloquer l'application sur cet appareil. Une seule fois — ensuite elle marche même sans connexion.</p>
+  <input type="text" id="gateInputCle" placeholder="Ex : ABC-123-XYZ-789">
+  <button class="btn-primary" id="gateBtnActiver" onclick="activerLicence()">Activer</button>
+  <p class="gate-error" id="gateErreur"></p>
+  <p class="gate-help" id="gateAideRenouveler" style="display:none;"><a href="https://wa.me/2250707296215?text=Bonjour%2C%20mon%20abonnement%20Boost%20Agriculture%20est%20expir%C3%A9%2C%20je%20voudrais%20le%20renouveler." target="_blank">📲 Renouveler mon abonnement sur WhatsApp</a></p>
+  <p class="gate-help">Pas encore de clé ? <a href="https://wa.me/2250707296215?text=Bonjour%2C%20je%20voudrais%20ma%20cl%C3%A9%20d%27acc%C3%A8s%20Boost%20Agriculture." target="_blank">Écrivez-nous sur WhatsApp</a></p>
+</div>
+
+<div class="install-banner" id="installBanner">
+  <span>📲 Installez l'app pour l'ouvrir en un tap, même hors connexion.</span>
+  <button id="installBtn">Installer</button>
+</div>
+
+<div class="install-banner" id="installBannerIOS">
+  <span>📲 Sur iPhone : appuyez sur <strong>Partager</strong> <span style="font-size:15px;">⬆️</span> en bas de Safari, puis <strong>"Sur l'écran d'accueil"</strong>.</span>
+  <button id="installBtnIOSClose">Compris</button>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="logo-box"><img src="icons/logo-header.png" alt="Boost Agriculture"></div>
+    <div>
+      <h1>Boost Agriculture</h1>
+      <p>Protocole A4S — dosage, calendrier, historique</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="banner-demo">
+      ✅ <strong>Dosages 4Tree</strong> basés sur le protocole officiel Boost Agriculture. Pour une culture non détaillée individuellement, l'app applique la règle générale de sa famille (indiqué clairement à chaque fois).
+    </div>
+
+    <!-- VUE ACCUEIL -->
+    <section class="view active" id="view-accueil">
+      <p class="meta" id="abonnementInfo" style="display:none; margin-bottom:10px;"></p>
+      <div class="card" id="cardNotifStatus" style="margin-bottom:14px;">
+        <h4 style="margin:0 0 6px;">🔔 Rappels dans l'app</h4>
+        <p class="meta" id="notifStatusText">Activez les rappels pour être averti ici quand un traitement est dû (fonctionne quand l'app est ouverte). Pour un rappel même app fermée, utilisez "📅 Rappel calendrier" sur chaque parcelle.</p>
+        <button class="btn-outline" id="btnActiverNotif" onclick="activerNotifications()" style="margin-top:8px;">Activer les rappels</button>
+      </div>
+      <div id="listeParcelles"></div>
+      <div class="empty" id="emptyAccueil" style="display:none;">
+        <div class="big">🌱</div>
+        <p>Aucune parcelle enregistrée.</p>
+        <p style="margin-top:4px;">Ajoutez votre première culture pour commencer.</p>
+      </div>
+      <button class="btn-primary" onclick="ouvrirModalParcelle()">+ Ajouter une parcelle</button>
+
+      <p class="credit">Protocole Boost Agriculture — dosage exact pour votre culture, à votre stade, sans connexion internet.</p>
+    </section>
+
+    <!-- VUE DOSAGE -->
+    <section class="view" id="view-dosage">
+      <div class="card">
+        <label>Parcelle</label>
+        <select id="doseParcelleSelect" onchange="majDosageAffiche()"></select>
+
+        <div id="doseEtapeWrap">
+          <label>Étape actuelle (4Tree)</label>
+          <select id="doseStadeSelect" onchange="majDosageAffiche()"></select>
+        </div>
+
+        <div id="doseResultat" style="margin-top:14px;"></div>
+      </div>
+      <button class="btn-primary" id="btnMarquerTraite" onclick="marquerTraite()">✓ Marquer comme traité aujourd'hui</button>
+
+      <div class="card ref-card" id="cardSoil"></div>
+      <div class="card ref-card" id="cardBooster"></div>
+
+      <div class="card" id="cardCalculSuperficie">
+        <h4>📐 Calculer pour votre superficie</h4>
+        <p class="meta">Entrez la superficie de votre parcelle (en hectares) pour estimer la quantité de produits à acheter.</p>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <input type="number" id="inputSuperficieHa" placeholder="Ex : 2.5" min="0" step="0.1" style="flex:1;">
+          <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="calculerSuperficie()">Calculer</button>
+        </div>
+        <div id="resultatSuperficie" style="margin-top:14px;"></div>
+        <div class="fallback-note" style="margin-top:10px;">⚠️ Ces quantités sont des <strong>fourchettes</strong>, pas des chiffres exacts — la couverture réelle varie selon le lot, le feuillage et la culture. En cas de doute, achetez plutôt un peu plus que moins, et contactez l'accompagnement Boost Agriculture avant un premier grand passage.</div>
+      </div>
+
+      <div class="fallback-note" id="noteSecurite"></div>
+    </section>
+
+    <!-- VUE HISTORIQUE -->
+    <section class="view" id="view-historique">
+      <div id="listeHistorique"></div>
+      <div class="empty" id="emptyHistorique" style="display:none;">
+        <div class="big">📋</div>
+        <p>Aucun traitement enregistré pour l'instant.</p>
+      </div>
+    </section>
+
+    <!-- VUE AUTHENTICITE -->
+    <section class="view" id="view-authenticite">
+      <div class="card">
+        <h3>Vérifier l'authenticité d'un produit A4S</h3>
+        <p class="meta">3 points communs aux emballages officiels, à comparer avant d'acheter.</p>
+        <div class="dose-row"><span class="produit">Logo</span><span class="val">Pictogramme noir "4Tree" — texte blanc, le point du "i" est une feuille verte</span></div>
+        <div class="dose-row"><span class="produit">Motif</span><span class="val">Silhouette d'arbre doré/argenté imprimée en grand sur l'emballage</span></div>
+        <div class="dose-row"><span class="produit">Texte</span><span class="val">Nom du produit en anglais + texte en thaï (marque déposée en Thaïlande)</span></div>
+      </div>
+
+      <div class="card auth-product">
+        <img src="authenticite/4soil.jpg" alt="4Soil Plus authentique" loading="lazy">
+        <h4>4Soil Plus</h4>
+        <p class="meta">Boîte orange vif, 400 g = 4 sachets de 100 g. Logo 4Tree en haut, arbre <strong>argenté seul, sans dégradé doré</strong> (contrairement au 4Tree et au Booster) — un repère simple pour ce produit précis. Sur le côté : poids exact, code-barres et logo "A4S" imprimés — présents sur l'officiel, souvent absents ou flous sur les copies.</p>
+      </div>
+
+      <div class="card auth-product">
+        <img src="authenticite/4tree.jpg" alt="4Tree authentique" loading="lazy">
+        <h4>4Tree (sachet actif)</h4>
+        <p class="meta">Boîte et sachet individuel bleu vif, 50 g. "EFFICIENCY ENHANCER" en blanc sous le motif de l'arbre. Le sachet reprend exactement les mêmes couleurs et le même arbre que la boîte — un sachet dépareillé de sa boîte est un signal d'alerte.</p>
+      </div>
+
+      <div class="card auth-product">
+        <img src="authenticite/booster.jpg" alt="Booster authentique" loading="lazy">
+        <h4>Booster</h4>
+        <p class="meta">Flacon bleu marine nuit, 250 ml, bouchon gris translucide gradué. "BOOSTER — IONIC FORMULA & X-FACTOR" en blanc. Couleur plus sombre que le 4Tree sachet — les deux bleus ne se ressemblent pas, c'est normal.</p>
+      </div>
+
+      <div class="card" id="cardPrixProduits">
+        <h3>Prix officiels & commande</h3>
+        <p class="meta" id="prixNoteApp"></p>
+        <div class="price-grid" id="prixGrid"></div>
+        <p class="meta" id="prixLivraison" style="margin-top:10px;"></p>
+        <a class="btn cta-whatsapp" id="btnCommanderWhatsapp" style="text-decoration:none; margin-top:10px;" target="_blank">📲 Commander sur WhatsApp</a>
+      </div>
+
+      <div class="card">
+        <h3>Un doute ?</h3>
+        <p class="meta">Contactez l'équipe directement, avant d'acheter.</p>
+        <a class="btn btn-outline" style="text-decoration:none;" href="https://wa.me/2250707296215" target="_blank">💬 Écrire sur WhatsApp</a>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <button class="active" data-view="accueil" onclick="changerVue('accueil')"><span class="ic">🏠</span>Accueil</button>
+    <button data-view="dosage" onclick="changerVue('dosage')"><span class="ic">🧪</span>Dosage</button>
+    <button data-view="historique" onclick="changerVue('historique')"><span class="ic">📋</span>Historique</button>
+    <button data-view="authenticite" onclick="changerVue('authenticite')"><span class="ic">✅</span>Authenticité</button>
+  </nav>
+</div>
+
+<!-- MODAL: ajouter parcelle -->
+<div class="modal-bg" id="modalParcelle">
+  <div class="modal">
+    <div class="close"><span onclick="fermerModalParcelle()">Fermer ✕</span></div>
+    <h2>Nouvelle parcelle</h2>
+    <p class="meta" style="color:#6b7d6b; font-size:12.5px; margin-bottom:6px;">Un champ, un carré, un coin de jardin — donnez-lui un nom.</p>
+
+    <label>Nom de la parcelle</label>
+    <input type="text" id="inputNomParcelle" placeholder="Ex : Champ derrière la maison">
+
+    <label>Culture</label>
+    <input type="text" id="cultureSearchInput" placeholder="🔍 Rechercher une culture (ex : tomate...)" oninput="renderCulturePicker(this.value)">
+    <div id="culturePickerGroups"></div>
+    <div id="inputCultureFallbackNote"></div>
+
+    <div id="inputStadeWrap">
+      <label>Étape actuelle (4Tree)</label>
+      <select id="inputStadeParcelle"></select>
+    </div>
+
+    <label>Date du dernier traitement (optionnel)</label>
+    <input type="date" id="inputDateParcelle">
+
+    <button class="btn-primary" style="margin-top:16px;" onclick="ajouterParcelle()">Ajouter</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Données ---------- */
+let DOSAGES = null;
+let TREE = null, SOIL = null, BOOST = null;
+const FAMILLE_ORDRE = ["maraichere", "cereale_tubercule", "rente_fruitiere", "cycle_court"];
+const STORE_KEY = "boostagri_data_v1";
+
+function chargerDonnees() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) return JSON.parse(raw);
+  return { parcelles: [], historique: [] };
+}
+function sauvegarderDonnees(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+let DATA = chargerDonnees();
+
+async function init() {
+  const res = await fetch("dosages.json");
+  DOSAGES = await res.json();
+  TREE = DOSAGES["4tree"];
+  SOIL = DOSAGES["4soil_plus"];
+  BOOST = DOSAGES["booster"];
+  renderCardsReference();
+  renderPrixProduits();
+  render();
+  majEtatNotif();
+  majAbonnementInfo();
+  verifierRappelsAuOuverture();
+}
+
+/* ---------- Navigation ---------- */
+function changerVue(nom) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById("view-" + nom).classList.add("active");
+  document.querySelectorAll("nav.bottom button").forEach(b => b.classList.toggle("active", b.dataset.view === nom));
+  if (nom === "dosage") { remplirSelectDoseParcelles(); majDosageAffiche(); }
+  if (nom === "historique") { renderHistorique(); }
+}
+
+/* ---------- Helpers culture ---------- */
+function familleLabel(familleKey) {
+  const f = TREE.regles_generales_par_famille[familleKey];
+  return f ? f.label : familleKey;
+}
+function reglesFamille(familleKey) {
+  return TREE.regles_generales_par_famille[familleKey];
+}
+
+/* ---------- Sélecteur de culture avec recherche (modal ajout) ---------- */
+let selectedCultureModal = null;
+
+function renderCulturePicker(filterRaw) {
+  const filter = (filterRaw || "").trim().toLowerCase();
+  const container = document.getElementById("culturePickerGroups");
+  container.innerHTML = "";
+  FAMILLE_ORDRE.forEach(familleKey => {
+    const keys = Object.keys(TREE.cultures)
+      .filter(k => TREE.cultures[k].famille === familleKey)
+      .filter(k => !filter || TREE.cultures[k].label.toLowerCase().includes(filter))
+      .sort((a, b) => TREE.cultures[a].label.localeCompare(TREE.cultures[b].label));
+    if (keys.length === 0) return;
+
+    const groupLabel = document.createElement("div");
+    groupLabel.className = "culture-group-label";
+    groupLabel.textContent = familleLabel(familleKey);
+    container.appendChild(groupLabel);
+
+    const grid = document.createElement("div");
+    grid.className = "culture-pill-grid";
+    keys.forEach(k => {
+      const c = TREE.cultures[k];
+      const btn = document.createElement("div");
+      btn.className = "culture-pill" + (selectedCultureModal === k ? " selected" : "");
+      btn.innerHTML = c.label + (c.detail ? "" : ' <span class="star">*</span>');
+      btn.onclick = () => selectionCultureModal(k);
+      grid.appendChild(btn);
+    });
+    container.appendChild(grid);
+  });
+  if (!container.innerHTML) {
+    container.innerHTML = `<p class="meta" style="padding:10px 0;">Aucune culture trouvée${filterRaw ? " pour « " + filterRaw + " »" : ""}.</p>`;
+  }
+}
+
+function selectionCultureModal(key) {
+  selectedCultureModal = key;
+  renderCulturePicker(document.getElementById("cultureSearchInput").value);
+  majZoneEtapeAjout(key);
+}
+
+function majZoneEtapeAjout(cultureKey) {
+  const culture = TREE.cultures[cultureKey];
+  const wrap = document.getElementById("inputStadeWrap");
+  const sel = document.getElementById("inputStadeParcelle");
+  const note = document.getElementById("inputCultureFallbackNote");
+  sel.innerHTML = "";
+  if (!culture) {
+    wrap.style.display = "none";
+    note.innerHTML = "";
     return;
   }
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          // met en cache les nouvelles requêtes réussies (même origine seulement)
-          if (response.ok && event.request.url.startsWith(self.location.origin)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached); // hors connexion et pas en cache : échec silencieux géré par l'app
-    })
-  );
+
+  if (culture.detail) {
+    wrap.style.display = "block";
+    note.innerHTML = "";
+    culture.etapes.forEach((etape, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = etape.nom;
+      sel.appendChild(opt);
+    });
+  } else {
+    wrap.style.display = "none";
+    const regle = reglesFamille(culture.famille);
+    note.innerHTML = `<div class="fallback-note">Cette culture n'a pas d'étapes détaillées individuellement. L'app applique la règle générale de sa famille (<strong>${familleLabel(culture.famille)}</strong>) : ${regle.dose}, tous les ${regle.frequence_jours} jours.</div>`;
+  }
+}
+
+/* ---------- Modal parcelle ---------- */
+function ouvrirModalParcelle() {
+  selectedCultureModal = null;
+  document.getElementById("cultureSearchInput").value = "";
+  renderCulturePicker("");
+  majZoneEtapeAjout(null);
+  document.getElementById("modalParcelle").classList.add("active");
+}
+function fermerModalParcelle() {
+  document.getElementById("modalParcelle").classList.remove("active");
+}
+function ajouterParcelle() {
+  const nom = document.getElementById("inputNomParcelle").value.trim();
+  const culture = selectedCultureModal;
+
+  if (!nom) { toast("Donnez un nom à la parcelle."); return; }
+  if (!culture) { toast("Choisissez une culture."); return; }
+
+  const cultureInfo = TREE.cultures[culture];
+  const etapeIndex = cultureInfo.detail ? parseInt(document.getElementById("inputStadeParcelle").value || "0", 10) : null;
+  const dateTraitement = document.getElementById("inputDateParcelle").value || null;
+
+  const parcelle = {
+    id: "p_" + Date.now(),
+    nom, culture, etapeIndex,
+    dernierTraitement: dateTraitement,
+    prochainTraitement: calculerProchaineDate(culture, etapeIndex, dateTraitement)
+  };
+  DATA.parcelles.push(parcelle);
+  sauvegarderDonnees(DATA);
+  fermerModalParcelle();
+  document.getElementById("inputNomParcelle").value = "";
+  render();
+  toast("Parcelle ajoutée ✓");
+}
+
+/* frequence_jours de l'étape courante d'une parcelle (détail ou règle famille) */
+function frequenceCourante(cultureKey, etapeIndex) {
+  const culture = TREE.cultures[cultureKey];
+  if (!culture) return null;
+  if (culture.detail) {
+    const etape = culture.etapes[etapeIndex];
+    return etape ? etape.frequence_jours : null;
+  }
+  return reglesFamille(culture.famille).frequence_jours;
+}
+
+function calculerProchaineDate(cultureKey, etapeIndex, depuisDate) {
+  const freq = frequenceCourante(cultureKey, etapeIndex);
+  if (!freq || !depuisDate) return null;
+  const d = new Date(depuisDate);
+  d.setDate(d.getDate() + freq);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Libellé "étape" à afficher pour une parcelle */
+function etapeLabel(parcelle) {
+  const culture = TREE.cultures[parcelle.culture];
+  if (!culture) return "?";
+  if (culture.detail) {
+    const etape = culture.etapes[parcelle.etapeIndex];
+    return etape ? etape.nom : "?";
+  }
+  return "Règle générale — " + familleLabel(culture.famille);
+}
+
+/* ---------- Rendu accueil ---------- */
+function render() {
+  const liste = document.getElementById("listeParcelles");
+  const empty = document.getElementById("emptyAccueil");
+  liste.innerHTML = "";
+  if (DATA.parcelles.length === 0) {
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  DATA.parcelles.forEach(p => {
+    const culture = TREE.cultures[p.culture];
+    const { label, cls } = statutTraitement(p.prochainTraitement);
+
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <span class="status-pill ${cls}">${label}</span>
+      <h3>${p.nom} <span class="badge-detail ${culture && culture.detail ? "on" : "off"}">${culture && culture.detail ? "détaillé" : "règle famille"}</span></h3>
+      <p class="meta">${culture ? culture.label : "?"} — ${etapeLabel(p)}</p>
+      <button class="btn-outline" onclick="allerDosage('${p.id}')">Voir le dosage</button>
+      ${p.prochainTraitement ? `<button class="btn-outline" onclick="ajouterRappelCalendrier('${p.id}')">📅 Rappel calendrier</button>` : ""}
+      <button class="btn-danger-text" onclick="supprimerParcelle('${p.id}')">Supprimer cette parcelle</button>
+    `;
+    liste.appendChild(div);
+  });
+}
+
+function statutTraitement(dateStr) {
+  if (!dateStr) return { label: "Pas de rappel planifié", cls: "status-none" };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cible = new Date(dateStr);
+  const diffJours = Math.round((cible - today) / 86400000);
+  if (diffJours < 0) return { label: `⏰ En retard de ${Math.abs(diffJours)} j`, cls: "status-late" };
+  if (diffJours === 0) return { label: "🔔 Traitement aujourd'hui", cls: "status-soon" };
+  if (diffJours <= 3) return { label: `Dans ${diffJours} j`, cls: "status-soon" };
+  return { label: `Prochain traitement dans ${diffJours} j`, cls: "status-ok" };
+}
+
+function supprimerParcelle(id) {
+  DATA.parcelles = DATA.parcelles.filter(p => p.id !== id);
+  sauvegarderDonnees(DATA);
+  render();
+  toast("Parcelle supprimée");
+}
+
+function allerDosage(id) {
+  changerVue("dosage");
+  document.getElementById("doseParcelleSelect").value = id;
+  majDosageAffiche();
+}
+
+/* ---------- Vue dosage ---------- */
+function remplirSelectDoseParcelles() {
+  const sel = document.getElementById("doseParcelleSelect");
+  sel.innerHTML = "";
+  DATA.parcelles.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.nom;
+    sel.appendChild(opt);
+  });
+  if (DATA.parcelles.length === 0) {
+    const opt = document.createElement("option");
+    opt.textContent = "Ajoutez une parcelle depuis Accueil";
+    sel.appendChild(opt);
+  }
+}
+
+function majDosageAffiche() {
+  const parcelleId = document.getElementById("doseParcelleSelect").value;
+  const parcelle = DATA.parcelles.find(p => p.id === parcelleId);
+  const etapeWrap = document.getElementById("doseEtapeWrap");
+  const stadeSelect = document.getElementById("doseStadeSelect");
+  const resultat = document.getElementById("doseResultat");
+  const btnTraite = document.getElementById("btnMarquerTraite");
+
+  if (!parcelle) {
+    resultat.innerHTML = "";
+    stadeSelect.innerHTML = "";
+    etapeWrap.style.display = "none";
+    btnTraite.style.display = "none";
+    return;
+  }
+  btnTraite.style.display = "block";
+
+  const culture = TREE.cultures[parcelle.culture];
+
+  if (culture.detail) {
+    etapeWrap.style.display = "block";
+    if (stadeSelect.dataset.filledFor !== parcelle.culture) {
+      stadeSelect.innerHTML = "";
+      culture.etapes.forEach((etape, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = etape.nom;
+        stadeSelect.appendChild(opt);
+      });
+      stadeSelect.dataset.filledFor = parcelle.culture;
+    }
+    stadeSelect.value = parcelle.etapeIndex != null ? parcelle.etapeIndex : 0;
+  } else {
+    etapeWrap.style.display = "none";
+    stadeSelect.innerHTML = "";
+    delete stadeSelect.dataset.filledFor;
+  }
+
+  const etapeIndex = culture.detail ? parseInt(stadeSelect.value, 10) : null;
+  const etape = culture.detail ? culture.etapes[etapeIndex] : null;
+
+  let corps = "";
+  if (culture.detail) {
+    if (etape.alerte) {
+      corps = `<div class="alert-box">⚠️ ${etape.alerte} — pas de dosage 4Tree pour cette étape.</div>`;
+    } else {
+      corps = `<div class="dose-row"><span class="produit">4Tree</span><span class="val">${etape.dose}</span></div>
+        <p class="meta" style="margin-top:6px;">Fréquence : ${etape.frequence_jours ? etape.frequence_jours + " jours" : "⚠️ non renseignée"}</p>`;
+    }
+  } else {
+    const regle = reglesFamille(culture.famille);
+    corps = `<div class="fallback-note">Règle générale de la famille <strong>${familleLabel(culture.famille)}</strong> (culture non détaillée individuellement).</div>
+      <div class="dose-row"><span class="produit">4Tree</span><span class="val">${regle.dose}</span></div>
+      <p class="meta" style="margin-top:6px;">Fréquence : ${regle.frequence_jours} jours</p>`;
+  }
+
+  resultat.innerHTML = `
+    <h3 style="margin-bottom:6px;">${culture.label} — ${culture.detail ? etape.nom : familleLabel(culture.famille)}</h3>
+    ${corps}
+  `;
+}
+
+function marquerTraite() {
+  const parcelleId = document.getElementById("doseParcelleSelect").value;
+  const parcelle = DATA.parcelles.find(p => p.id === parcelleId);
+  if (!parcelle) return;
+
+  const culture = TREE.cultures[parcelle.culture];
+  const today = new Date().toISOString().slice(0, 10);
+
+  let etapeAppliqueeLabel;
+  if (culture.detail) {
+    const stadeSelect = document.getElementById("doseStadeSelect");
+    const indexTraite = parseInt(stadeSelect.value, 10);
+    etapeAppliqueeLabel = culture.etapes[indexTraite].nom;
+    // avance à l'étape suivante si elle existe, sinon reste sur la dernière
+    const prochainIndex = Math.min(indexTraite + 1, culture.etapes.length - 1);
+    parcelle.etapeIndex = prochainIndex;
+    parcelle.dernierTraitement = today;
+    parcelle.prochainTraitement = calculerProchaineDate(parcelle.culture, prochainIndex, today);
+  } else {
+    etapeAppliqueeLabel = "Règle générale — " + familleLabel(culture.famille);
+    parcelle.dernierTraitement = today;
+    parcelle.prochainTraitement = calculerProchaineDate(parcelle.culture, null, today);
+  }
+
+  DATA.historique.unshift({
+    id: "h_" + Date.now(),
+    parcelleNom: parcelle.nom,
+    culture: culture.label,
+    stade: etapeAppliqueeLabel,
+    date: today
+  });
+
+  sauvegarderDonnees(DATA);
+  render();
+  majDosageAffiche();
+  toast("Traitement enregistré ✓");
+  const freq = frequenceCourante(parcelle.culture, parcelle.etapeIndex);
+  notifierSiPossible("Traitement enregistré", `${parcelle.nom} — prochain rappel ${freq ? "dans " + freq + " jours" : "à définir (étape sans fréquence fixe)"}.`);
+}
+
+/* ---------- Calculateur de superficie (fourchettes, jamais un chiffre unique) ---------- */
+// Couverture par unité, en hectares. Sources :
+// - 4Tree : 3 à 6 Ha/sachet, générique toutes cultures — confirmé par le fournisseur (pas un chiffre unique).
+// - Booster : 4 à 6 Ha/tube — donnée existante, PAS reconfirmée récemment, affichée comme telle.
+// - 4Soil Plus : 2 Ha/sachet de 100g — fixe, non contesté.
+const SUPERFICIE_REF = {
+  tree: { haParUniteMin: 3, haParUniteMax: 6, unite: "sachet", confirme: true },
+  booster: { haParUniteMin: 4, haParUniteMax: 6, unite: "tube", confirme: false },
+  soil: { haParUnite: 2, unite: "sachet de 100g", confirme: true }
+};
+
+function calculerSuperficie() {
+  const input = document.getElementById("inputSuperficieHa");
+  const resultEl = document.getElementById("resultatSuperficie");
+  const S = parseFloat(input.value);
+
+  if (!S || S <= 0) {
+    resultEl.innerHTML = `<p class="meta" style="color:var(--danger);">Entrez une superficie valide (en hectares).</p>`;
+    return;
+  }
+
+  const treeMin = S / SUPERFICIE_REF.tree.haParUniteMax;
+  const treeMax = S / SUPERFICIE_REF.tree.haParUniteMin;
+  const boostMin = S / SUPERFICIE_REF.booster.haParUniteMax;
+  const boostMax = S / SUPERFICIE_REF.booster.haParUniteMin;
+  const soilQte = Math.ceil(S / SUPERFICIE_REF.soil.haParUnite);
+
+  const fmt = (n) => n.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+
+  resultEl.innerHTML = `
+    <div class="dose-row">
+      <span class="produit">4Tree</span>
+      <span class="val">${fmt(treeMin)} à ${fmt(treeMax)} sachet(s) — achetez ${Math.ceil(treeMax)}</span>
+    </div>
+    <div class="dose-row">
+      <span class="produit">Booster <span class="badge-detail off">à confirmer</span></span>
+      <span class="val">${fmt(boostMin)} à ${fmt(boostMax)} tube(s) — achetez ${Math.ceil(boostMax)}</span>
+    </div>
+    <div class="dose-row">
+      <span class="produit">4Soil Plus</span>
+      <span class="val">${soilQte} sachet(s) de 100g</span>
+    </div>
+  `;
+}
+
+/* ---------- Cartes de référence 4Soil Plus / Booster (universelles) ---------- */
+function renderCardsReference() {
+  const soilEl = document.getElementById("cardSoil");
+  soilEl.innerHTML = `
+    <h4>🌍 4Soil Plus — protocole du sol (valable pour toutes vos parcelles)</h4>
+    ${SOIL.etapes.map(e => `<div class="etape-line"><span class="n">${e.nom}</span> — ${e.quand} : ${e.action}</div>`).join("")}
+    <p class="meta" style="margin-top:8px;">${SOIL.note}</p>
+  `;
+  const boostEl = document.getElementById("cardBooster");
+  boostEl.innerHTML = `
+    <h4>🛡️ Booster — dose fixe (valable pour toutes vos parcelles)</h4>
+    <div class="dose-row"><span class="produit">Dose</span><span class="val">${BOOST.dose_fixe}</span></div>
+    <p class="meta" style="margin-top:6px;">${BOOST.mode_utilisation}</p>
+    <div class="alert-box" style="margin-top:8px;">⚠️ ${BOOST.securite}</div>
+  `;
+
+  const noteEl = document.getElementById("noteSecurite");
+  if (noteEl && DOSAGES.source && DOSAGES.source.contact_officiel) {
+    noteEl.innerHTML = `🩺 ${DOSAGES.source.contact_officiel}`;
+  }
+}
+
+/* ---------- Prix officiels des produits (vue Authenticité) ---------- */
+function renderPrixProduits() {
+  const prix = DOSAGES.prix_produits;
+  if (!prix) return;
+
+  document.getElementById("prixNoteApp").textContent = prix.note_app;
+
+  const grid = document.getElementById("prixGrid");
+  grid.innerHTML = prix.produits.map(p => `
+    <div class="price-box">
+      <h5>${p.nom}</h5>
+      <div class="price-main">${p.prix_principal}</div>
+      ${p.sous_lignes.map(l => `<div class="price-sub">${l}</div>`).join("")}
+    </div>
+  `).join("");
+
+  document.getElementById("prixLivraison").innerHTML = `<strong>Livraison :</strong> ${prix.livraison}`;
+
+  const btn = document.getElementById("btnCommanderWhatsapp");
+  btn.href = prix.whatsapp_url;
+}
+
+/* ---------- Historique ---------- */
+function renderHistorique() {
+  const liste = document.getElementById("listeHistorique");
+  const empty = document.getElementById("emptyHistorique");
+  liste.innerHTML = "";
+  if (DATA.historique.length === 0) {
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  DATA.historique.forEach(h => {
+    const div = document.createElement("div");
+    div.className = "hist-item";
+    div.innerHTML = `<div class="date">${h.date}</div><div class="title">${h.parcelleNom} — ${h.culture} (${h.stade})</div>`;
+    liste.appendChild(div);
+  });
+}
+
+/* ---------- Rappels / notifications ---------- */
+function verifierRappelsAuOuverture() {
+  const enRetardOuAujourdhui = DATA.parcelles.filter(p => {
+    if (!p.prochainTraitement) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cible = new Date(p.prochainTraitement);
+    return cible <= today;
+  });
+  if (enRetardOuAujourdhui.length > 0) {
+    const noms = enRetardOuAujourdhui.map(p => p.nom).join(", ");
+    notifierSiPossible("Traitement à faire", `${enRetardOuAujourdhui.length} parcelle(s) à traiter : ${noms}`);
+  }
+}
+function notifierSiPossible(titre, corps) {
+  // Ne JAMAIS demander la permission ici : un navigateur bloque silencieusement
+  // (et parfois définitivement) une demande de permission qui ne vient pas
+  // d'un clic direct de l'utilisateur. La demande se fait uniquement via le
+  // bouton "Activer les rappels" (voir activerNotifications ci-dessous).
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(titre, { body: corps, icon: "icons/icon-192.png" });
+  }
+}
+
+/* ---------- Statut des rappels dans l'app (permission Notification) ---------- */
+function majEtatNotif() {
+  const btn = document.getElementById("btnActiverNotif");
+  const txt = document.getElementById("notifStatusText");
+  if (!btn || !txt) return;
+  if (!("Notification" in window)) {
+    btn.style.display = "none";
+    txt.textContent = "Les rappels dans l'app ne sont pas pris en charge par ce navigateur. Utilisez plutôt \"📅 Rappel calendrier\" sur chaque parcelle.";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    btn.textContent = "✅ Rappels activés";
+    btn.disabled = true;
+    txt.textContent = "Vous serez averti ici à l'ouverture de l'app quand un traitement est dû. Pour un rappel même app fermée, utilisez aussi \"📅 Rappel calendrier\" sur chaque parcelle.";
+  } else if (Notification.permission === "denied") {
+    btn.textContent = "🔕 Rappels bloqués par le navigateur";
+    btn.disabled = true;
+    txt.textContent = "Les notifications sont bloquées pour cette app dans les réglages de votre navigateur/téléphone. Utilisez plutôt \"📅 Rappel calendrier\" sur chaque parcelle — plus fiable de toute façon.";
+  } else {
+    btn.textContent = "Activer les rappels";
+    btn.disabled = false;
+    txt.style.removeProperty && txt.style.removeProperty("color");
+  }
+}
+
+function activerNotifications() {
+  if (!("Notification" in window)) return;
+  Notification.requestPermission().then(() => {
+    majEtatNotif();
+    if (Notification.permission === "granted") {
+      toast("Rappels activés ✅");
+      verifierRappelsAuOuverture();
+    } else if (Notification.permission === "denied") {
+      toast("Rappels bloqués — utilisez le rappel calendrier sur chaque parcelle.");
+    }
+  });
+}
+
+/* ---------- Rappel calendrier (.ics) — fonctionne même app/navigateur fermés ---------- */
+function escICS(str) {
+  return String(str)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function formatICSDateTime(dateStr, heureHHMMSS) {
+  return dateStr.replace(/-/g, "") + "T" + heureHHMMSS;
+}
+
+function genererICS(parcelle) {
+  const dateStr = parcelle.prochainTraitement;
+  if (!dateStr) return null;
+  const culture = TREE.cultures[parcelle.culture];
+  const dtStart = formatICSDateTime(dateStr, "080000");
+  const dtEnd = formatICSDateTime(dateStr, "083000");
+  const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const uid = `boostagri-${parcelle.id}-${dateStr}@boostagriculture.app`;
+  const titre = escICS(`Traitement A4S — ${parcelle.nom}`);
+  const desc = escICS(`Protocole Boost Agriculture : ${culture ? culture.label : "?"} — ${etapeLabel(parcelle)}. Ouvrez l'app Boost Agriculture pour voir le dosage exact.`);
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Boost Agriculture//Rappel Traitement//FR",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:${titre}`,
+    `DESCRIPTION:${desc}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Rappel traitement Boost Agriculture",
+    "TRIGGER:-PT0M",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+
+function ajouterRappelCalendrier(id) {
+  const parcelle = DATA.parcelles.find(p => p.id === id);
+  if (!parcelle || !parcelle.prochainTraitement) {
+    toast("Pas de date de traitement définie pour cette parcelle.");
+    return;
+  }
+  const ics = genererICS(parcelle);
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rappel-${parcelle.nom.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "traitement"}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast("Rappel téléchargé — ouvrez-le pour l'ajouter à votre agenda 📅");
+}
+
+/* ---------- Toast ---------- */
+let toastTimeout;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+/* ---------- PWA install prompt ---------- */
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById("installBanner").classList.add("show");
+  const btnGateInstall = document.getElementById("gateInstallBtnAndroid");
+  if (btnGateInstall) btnGateInstall.style.display = "flex";
 });
+document.getElementById("installBtn").addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById("installBanner").classList.remove("show");
+});
+document.getElementById("gateInstallBtnAndroid").addEventListener("click", async () => {
+  if (!deferredPrompt) { passerEtapeInstall(); return; }
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById("gateInstallBtnAndroid").style.display = "none";
+  document.getElementById("installBanner").classList.remove("show");
+  // Qu'il installe ou refuse le prompt natif, on le laisse continuer —
+  // on ne bloque jamais sur le choix fait dans le prompt lui-même.
+  passerEtapeInstall();
+});
+document.getElementById("gateInstallBtnContinuer").addEventListener("click", passerEtapeInstall);
+
+/* iOS Safari ne déclenche jamais "beforeinstallprompt" — pas de bug, limite d'iOS.
+   On détecte iOS et on affiche des instructions manuelles à la place. */
+function estIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function dejaInstallee() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+if (estIOS() && !dejaInstallee()) {
+  document.getElementById("installBannerIOS").classList.add("show");
+}
+document.getElementById("installBtnIOSClose").addEventListener("click", () => {
+  document.getElementById("installBannerIOS").classList.remove("show");
+});
+
+/* ---------- Service worker ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
+/* ---------- Licence d'accès / abonnement ---------- */
+const LICENCE_STORE_KEY = "boostagri_licence_v1";
+const DEVICE_ID_KEY = "boostagri_device_id";
+const DERNIER_CHECK_KEY = "boostagri_licence_dernier_check_v1";
+const INTERVALLE_CHECK_MS = 12 * 60 * 60 * 1000; // revérifie au plus une fois toutes les 12h
+
+function obtenirDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
+function lireLicenceLocale() {
+  const raw = localStorage.getItem(LICENCE_STORE_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+function licenceValide() {
+  const licence = lireLicenceLocale();
+  return !!(licence && licence.valide === true);
+}
+
+/* Affiche la date d'échéance de l'abonnement sur l'écran d'accueil, si connue.
+   Un abonnement sans date d'expiration (licence classique) n'affiche rien. */
+function majAbonnementInfo() {
+  const el = document.getElementById("abonnementInfo");
+  if (!el) return;
+  const licence = lireLicenceLocale();
+  if (!licence || !licence.expire_le) { el.style.display = "none"; return; }
+
+  const dateExpire = new Date(licence.expire_le);
+  if (isNaN(dateExpire.getTime())) { el.style.display = "none"; return; }
+
+  const aujourdHui = new Date(); aujourdHui.setHours(0, 0, 0, 0);
+  const joursRestants = Math.round((dateExpire - aujourdHui) / 86400000);
+  const dateAffichee = dateExpire.toLocaleDateString("fr-FR");
+
+  el.style.display = "block";
+  if (joursRestants <= 7) {
+    el.innerHTML = `⚠️ Abonnement valable jusqu'au <strong>${dateAffichee}</strong> — pensez à le renouveler bientôt.`;
+  } else {
+    el.textContent = `Abonnement actif jusqu'au ${dateAffichee}.`;
+  }
+}
+
+async function activerLicence() {
+  const input = document.getElementById("gateInputCle");
+  const erreurEl = document.getElementById("gateErreur");
+  const btn = document.getElementById("gateBtnActiver");
+  const cle = input.value.trim();
+
+  erreurEl.textContent = "";
+  if (!cle) { erreurEl.textContent = "Entrez votre clé d'accès."; return; }
+
+  const texteInitial = btn.textContent;
+  btn.textContent = "Vérification...";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch("/.netlify/functions/activate-licence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cle, device_id: obtenirDeviceId() })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
+        valide: true, cle, activee_le: new Date().toISOString(), expire_le: data.expire_le || null
+      }));
+      localStorage.removeItem(DERNIER_CHECK_KEY);
+      reinitialiserEcranAcces();
+      demarrerApp();
+    } else {
+      erreurEl.textContent = data.message || "Clé invalide.";
+    }
+  } catch (e) {
+    erreurEl.textContent = "Pas de connexion. La première activation demande internet, ensuite l'app marche hors ligne.";
+  } finally {
+    btn.textContent = texteInitial;
+    btn.disabled = false;
+  }
+}
+
+function demarrerApp() {
+  document.getElementById("gateLicence").classList.add("hidden");
+  document.getElementById("app").style.visibility = "visible";
+  init();
+  verifierAbonnement();
+}
+
+/* Remet l'écran d'accès dans son état "première activation" par défaut
+   (utile après un renouvellement réussi depuis l'écran d'expiration). */
+function reinitialiserEcranAcces() {
+  document.getElementById("gateTitre").textContent = "Accès à l'application";
+  document.getElementById("gateSousTitre").textContent = "Entrez la clé reçue après votre achat Boost Agriculture pour débloquer l'application sur cet appareil. Une seule fois — ensuite elle marche même sans connexion.";
+  document.getElementById("gateAideRenouveler").style.display = "none";
+  document.getElementById("gateInputCle").value = "";
+}
+
+/* Affiche l'écran de renouvellement par-dessus l'app quand l'abonnement a expiré. */
+function verrouillerPourExpiration() {
+  document.getElementById("gateTitre").textContent = "Votre abonnement a expiré";
+  document.getElementById("gateSousTitre").textContent = "Votre accès à Boost Agriculture est arrivé à échéance. Renouvelez-le sur WhatsApp, ou collez ci-dessous la nouvelle clé reçue après votre renouvellement.";
+  document.getElementById("gateAideRenouveler").style.display = "block";
+  document.getElementById("gateErreur").textContent = "";
+  document.getElementById("app").style.visibility = "hidden";
+  document.getElementById("gateLicence").classList.remove("hidden");
+}
+
+/* Revérifie périodiquement, en tâche de fond, que l'abonnement est toujours actif.
+   Ne verrouille JAMAIS l'app juste parce qu'on est hors connexion — seulement
+   quand le serveur confirme explicitement que l'abonnement est expiré/révoqué. */
+async function verifierAbonnement() {
+  const licence = lireLicenceLocale();
+  if (!licence || !licence.cle) return;
+  if (!navigator.onLine) return;
+
+  const dernierCheck = Number(localStorage.getItem(DERNIER_CHECK_KEY) || 0);
+  if (Date.now() - dernierCheck < INTERVALLE_CHECK_MS) return;
+
+  try {
+    const res = await fetch("/.netlify/functions/check-licence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cle: licence.cle })
+    });
+    const data = await res.json();
+    localStorage.setItem(DERNIER_CHECK_KEY, String(Date.now()));
+
+    if (data.ok && data.expire) {
+      localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
+        ...licence, valide: false
+      }));
+      verrouillerPourExpiration();
+    } else if (data.ok) {
+      // toujours actif : on garde la date d'expiration à jour pour l'affichage
+      localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
+        ...licence, valide: true, expire_le: data.expire_le || licence.expire_le || null
+      }));
+      majAbonnementInfo();
+    }
+    // en cas d'erreur serveur (data.ok === false pour une autre raison), on ne
+    // touche à rien : mieux vaut laisser l'accès en place que bloquer à tort.
+  } catch (e) {
+    // pas de connexion ou fonction indisponible : silencieux, on réessaiera plus tard.
+  }
+}
+
+/* ---------- Étape "installez l'app" avant activation de la clé ----------
+   Objectif : pousser l'installation PWA AVANT que le client colle sa clé,
+   pas après — sinon quasi personne n'installe une fois l'app déjà utilisable
+   dans l'onglet du navigateur. Ne bloque jamais définitivement : bouton
+   "Continuer" toujours visible pour les cas où l'install n'est pas possible
+   (desktop, navigateur in-app Facebook/Instagram, etc.). */
+const INSTALL_ETAPE_VUE_KEY = "boostagri_install_etape_vue";
+
+function afficherEtapeInstall() {
+  document.getElementById("gateLicence").classList.add("hidden");
+  document.getElementById("gateInstall").classList.remove("hidden");
+  if (estIOS() && !dejaInstallee()) {
+    document.getElementById("gateInstallIOSInstructions").style.display = "block";
+    return;
+  }
+  // Android/autres : si le navigateur ne propose pas le bouton natif d'installation
+  // (beforeinstallprompt) dans la seconde, on affiche des instructions manuelles —
+  // sinon le client reste bloqué devant un bouton "Continuer" sans savoir comment
+  // installer réellement l'app.
+  setTimeout(() => {
+    const btnAndroid = document.getElementById("gateInstallBtnAndroid");
+    const gateEncoreActif = !document.getElementById("gateInstall").classList.contains("hidden");
+    if (gateEncoreActif && btnAndroid && btnAndroid.style.display === "none") {
+      document.getElementById("gateInstallAndroidManualNote").style.display = "block";
+    }
+  }, 1000);
+}
+function afficherGateLicence() {
+  document.getElementById("gateInstall").classList.add("hidden");
+  document.getElementById("gateLicence").classList.remove("hidden");
+}
+function passerEtapeInstall() {
+  localStorage.setItem(INSTALL_ETAPE_VUE_KEY, "1");
+  afficherGateLicence();
+}
+
+function initEcranAccueil() {
+  document.getElementById("app").style.visibility = "hidden";
+
+  if (licenceValide()) {
+    document.getElementById("gateInstall").classList.add("hidden");
+    document.getElementById("gateLicence").classList.add("hidden");
+    demarrerApp();
+    return;
+  }
+
+  const dejaVuEtapeInstall = localStorage.getItem(INSTALL_ETAPE_VUE_KEY) === "1";
+  if (dejaInstallee() || dejaVuEtapeInstall) {
+    afficherGateLicence();
+  } else {
+    afficherEtapeInstall();
+  }
+}
+initEcranAccueil();
+</script>
+</body>
+</html>
