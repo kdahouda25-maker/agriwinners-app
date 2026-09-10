@@ -200,17 +200,39 @@
   .gate-screen .gate-error { color: #ffb3a7; font-size: 13px; margin-top: 10px; min-height: 18px; max-width: 320px; }
   .gate-screen .gate-help { margin-top: 30px; font-size: 12.5px; opacity: 0.8; }
   .gate-screen .gate-help a { color: #fff; }
+  .gate-install-note {
+    text-align: left; background: rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 14px; margin-top: 16px; font-size: 13px; line-height: 1.6; max-width: 320px;
+  }
+  .gate-screen .btn-outline-light {
+    margin-top: 14px; max-width: 320px; background: transparent; border: 1.5px solid #fff; color: #fff;
+  }
 </style>
 </head>
 <body>
 
-<div class="gate-screen" id="gateLicence">
+<div class="gate-screen" id="gateInstall">
   <img class="gate-logo" src="icons/icon-192.png" alt="Boost Agriculture">
-  <h2>Accès à l'application</h2>
-  <p class="sub">Entrez la clé reçue après votre achat Boost Agriculture pour débloquer l'application sur cet appareil. Une seule fois — ensuite elle marche même sans connexion.</p>
+  <h2>Installez l'application</h2>
+  <p class="sub">Avant d'activer votre clé, installez Boost Agriculture sur votre téléphone. Ça prend 10 secondes, et l'app marche ensuite même sans connexion, directement au champ.</p>
+
+  <button class="btn-primary" id="gateInstallBtnAndroid" style="display:none; max-width:320px;">📲 Installer l'application</button>
+
+  <div class="gate-install-note" id="gateInstallIOSInstructions" style="display:none;">
+    Sur iPhone : appuyez sur <strong>Partager</strong> <span style="font-size:15px;">⬆️</span> en bas de Safari, puis <strong>« Sur l'écran d'accueil »</strong>.
+  </div>
+
+  <button class="btn-outline btn-outline-light" id="gateInstallBtnContinuer">J'ai installé — Continuer</button>
+</div>
+
+<div class="gate-screen hidden" id="gateLicence">
+  <img class="gate-logo" src="icons/icon-192.png" alt="Boost Agriculture">
+  <h2 id="gateTitre">Accès à l'application</h2>
+  <p class="sub" id="gateSousTitre">Entrez la clé reçue après votre achat Boost Agriculture pour débloquer l'application sur cet appareil. Une seule fois — ensuite elle marche même sans connexion.</p>
   <input type="text" id="gateInputCle" placeholder="Ex : ABC-123-XYZ-789">
   <button class="btn-primary" id="gateBtnActiver" onclick="activerLicence()">Activer</button>
   <p class="gate-error" id="gateErreur"></p>
+  <p class="gate-help" id="gateAideRenouveler" style="display:none;"><a href="https://wa.me/2250707296215?text=Bonjour%2C%20mon%20abonnement%20Boost%20Agriculture%20est%20expir%C3%A9%2C%20je%20voudrais%20le%20renouveler." target="_blank">📲 Renouveler mon abonnement sur WhatsApp</a></p>
   <p class="gate-help">Pas encore de clé ? <a href="https://wa.me/2250707296215?text=Bonjour%2C%20je%20voudrais%20ma%20cl%C3%A9%20d%27acc%C3%A8s%20Boost%20Agriculture." target="_blank">Écrivez-nous sur WhatsApp</a></p>
 </div>
 
@@ -240,6 +262,7 @@
 
     <!-- VUE ACCUEIL -->
     <section class="view active" id="view-accueil">
+      <p class="meta" id="abonnementInfo" style="display:none; margin-bottom:10px;"></p>
       <div class="card" id="cardNotifStatus" style="margin-bottom:14px;">
         <h4 style="margin:0 0 6px;">🔔 Rappels dans l'app</h4>
         <p class="meta" id="notifStatusText">Activez les rappels pour être averti ici quand un traitement est dû (fonctionne quand l'app est ouverte). Pour un rappel même app fermée, utilisez "📅 Rappel calendrier" sur chaque parcelle.</p>
@@ -405,6 +428,7 @@ async function init() {
   renderPrixProduits();
   render();
   majEtatNotif();
+  majAbonnementInfo();
   verifierRappelsAuOuverture();
 }
 
@@ -984,6 +1008,8 @@ window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
   document.getElementById("installBanner").classList.add("show");
+  const btnGateInstall = document.getElementById("gateInstallBtnAndroid");
+  if (btnGateInstall) btnGateInstall.style.display = "flex";
 });
 document.getElementById("installBtn").addEventListener("click", async () => {
   if (!deferredPrompt) return;
@@ -992,6 +1018,18 @@ document.getElementById("installBtn").addEventListener("click", async () => {
   deferredPrompt = null;
   document.getElementById("installBanner").classList.remove("show");
 });
+document.getElementById("gateInstallBtnAndroid").addEventListener("click", async () => {
+  if (!deferredPrompt) { passerEtapeInstall(); return; }
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById("gateInstallBtnAndroid").style.display = "none";
+  document.getElementById("installBanner").classList.remove("show");
+  // Qu'il installe ou refuse le prompt natif, on le laisse continuer —
+  // on ne bloque jamais sur le choix fait dans le prompt lui-même.
+  passerEtapeInstall();
+});
+document.getElementById("gateInstallBtnContinuer").addEventListener("click", passerEtapeInstall);
 
 /* iOS Safari ne déclenche jamais "beforeinstallprompt" — pas de bug, limite d'iOS.
    On détecte iOS et on affiche des instructions manuelles à la place. */
@@ -1015,9 +1053,11 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-/* ---------- Licence d'accès ---------- */
+/* ---------- Licence d'accès / abonnement ---------- */
 const LICENCE_STORE_KEY = "boostagri_licence_v1";
 const DEVICE_ID_KEY = "boostagri_device_id";
+const DERNIER_CHECK_KEY = "boostagri_licence_dernier_check_v1";
+const INTERVALLE_CHECK_MS = 12 * 60 * 60 * 1000; // revérifie au plus une fois toutes les 12h
 
 function obtenirDeviceId() {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -1028,10 +1068,38 @@ function obtenirDeviceId() {
   return id;
 }
 
-function licenceValide() {
+function lireLicenceLocale() {
   const raw = localStorage.getItem(LICENCE_STORE_KEY);
-  if (!raw) return false;
-  try { return JSON.parse(raw).valide === true; } catch (e) { return false; }
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+function licenceValide() {
+  const licence = lireLicenceLocale();
+  return !!(licence && licence.valide === true);
+}
+
+/* Affiche la date d'échéance de l'abonnement sur l'écran d'accueil, si connue.
+   Un abonnement sans date d'expiration (licence classique) n'affiche rien. */
+function majAbonnementInfo() {
+  const el = document.getElementById("abonnementInfo");
+  if (!el) return;
+  const licence = lireLicenceLocale();
+  if (!licence || !licence.expire_le) { el.style.display = "none"; return; }
+
+  const dateExpire = new Date(licence.expire_le);
+  if (isNaN(dateExpire.getTime())) { el.style.display = "none"; return; }
+
+  const aujourdHui = new Date(); aujourdHui.setHours(0, 0, 0, 0);
+  const joursRestants = Math.round((dateExpire - aujourdHui) / 86400000);
+  const dateAffichee = dateExpire.toLocaleDateString("fr-FR");
+
+  el.style.display = "block";
+  if (joursRestants <= 7) {
+    el.innerHTML = `⚠️ Abonnement valable jusqu'au <strong>${dateAffichee}</strong> — pensez à le renouveler bientôt.`;
+  } else {
+    el.textContent = `Abonnement actif jusqu'au ${dateAffichee}.`;
+  }
 }
 
 async function activerLicence() {
@@ -1057,8 +1125,10 @@ async function activerLicence() {
 
     if (data.ok) {
       localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
-        valide: true, cle, activee_le: new Date().toISOString()
+        valide: true, cle, activee_le: new Date().toISOString(), expire_le: data.expire_le || null
       }));
+      localStorage.removeItem(DERNIER_CHECK_KEY);
+      reinitialiserEcranAcces();
       demarrerApp();
     } else {
       erreurEl.textContent = data.message || "Clé invalide.";
@@ -1075,12 +1145,109 @@ function demarrerApp() {
   document.getElementById("gateLicence").classList.add("hidden");
   document.getElementById("app").style.visibility = "visible";
   init();
+  verifierAbonnement();
 }
 
-document.getElementById("app").style.visibility = "hidden";
-if (licenceValide()) {
-  demarrerApp();
+/* Remet l'écran d'accès dans son état "première activation" par défaut
+   (utile après un renouvellement réussi depuis l'écran d'expiration). */
+function reinitialiserEcranAcces() {
+  document.getElementById("gateTitre").textContent = "Accès à l'application";
+  document.getElementById("gateSousTitre").textContent = "Entrez la clé reçue après votre achat Boost Agriculture pour débloquer l'application sur cet appareil. Une seule fois — ensuite elle marche même sans connexion.";
+  document.getElementById("gateAideRenouveler").style.display = "none";
+  document.getElementById("gateInputCle").value = "";
 }
+
+/* Affiche l'écran de renouvellement par-dessus l'app quand l'abonnement a expiré. */
+function verrouillerPourExpiration() {
+  document.getElementById("gateTitre").textContent = "Votre abonnement a expiré";
+  document.getElementById("gateSousTitre").textContent = "Votre accès à Boost Agriculture est arrivé à échéance. Renouvelez-le sur WhatsApp, ou collez ci-dessous la nouvelle clé reçue après votre renouvellement.";
+  document.getElementById("gateAideRenouveler").style.display = "block";
+  document.getElementById("gateErreur").textContent = "";
+  document.getElementById("app").style.visibility = "hidden";
+  document.getElementById("gateLicence").classList.remove("hidden");
+}
+
+/* Revérifie périodiquement, en tâche de fond, que l'abonnement est toujours actif.
+   Ne verrouille JAMAIS l'app juste parce qu'on est hors connexion — seulement
+   quand le serveur confirme explicitement que l'abonnement est expiré/révoqué. */
+async function verifierAbonnement() {
+  const licence = lireLicenceLocale();
+  if (!licence || !licence.cle) return;
+  if (!navigator.onLine) return;
+
+  const dernierCheck = Number(localStorage.getItem(DERNIER_CHECK_KEY) || 0);
+  if (Date.now() - dernierCheck < INTERVALLE_CHECK_MS) return;
+
+  try {
+    const res = await fetch("/.netlify/functions/check-licence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cle: licence.cle })
+    });
+    const data = await res.json();
+    localStorage.setItem(DERNIER_CHECK_KEY, String(Date.now()));
+
+    if (data.ok && data.expire) {
+      localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
+        ...licence, valide: false
+      }));
+      verrouillerPourExpiration();
+    } else if (data.ok) {
+      // toujours actif : on garde la date d'expiration à jour pour l'affichage
+      localStorage.setItem(LICENCE_STORE_KEY, JSON.stringify({
+        ...licence, valide: true, expire_le: data.expire_le || licence.expire_le || null
+      }));
+      majAbonnementInfo();
+    }
+    // en cas d'erreur serveur (data.ok === false pour une autre raison), on ne
+    // touche à rien : mieux vaut laisser l'accès en place que bloquer à tort.
+  } catch (e) {
+    // pas de connexion ou fonction indisponible : silencieux, on réessaiera plus tard.
+  }
+}
+
+/* ---------- Étape "installez l'app" avant activation de la clé ----------
+   Objectif : pousser l'installation PWA AVANT que le client colle sa clé,
+   pas après — sinon quasi personne n'installe une fois l'app déjà utilisable
+   dans l'onglet du navigateur. Ne bloque jamais définitivement : bouton
+   "Continuer" toujours visible pour les cas où l'install n'est pas possible
+   (desktop, navigateur in-app Facebook/Instagram, etc.). */
+const INSTALL_ETAPE_VUE_KEY = "boostagri_install_etape_vue";
+
+function afficherEtapeInstall() {
+  document.getElementById("gateLicence").classList.add("hidden");
+  document.getElementById("gateInstall").classList.remove("hidden");
+  if (estIOS() && !dejaInstallee()) {
+    document.getElementById("gateInstallIOSInstructions").style.display = "block";
+  }
+}
+function afficherGateLicence() {
+  document.getElementById("gateInstall").classList.add("hidden");
+  document.getElementById("gateLicence").classList.remove("hidden");
+}
+function passerEtapeInstall() {
+  localStorage.setItem(INSTALL_ETAPE_VUE_KEY, "1");
+  afficherGateLicence();
+}
+
+function initEcranAccueil() {
+  document.getElementById("app").style.visibility = "hidden";
+
+  if (licenceValide()) {
+    document.getElementById("gateInstall").classList.add("hidden");
+    document.getElementById("gateLicence").classList.add("hidden");
+    demarrerApp();
+    return;
+  }
+
+  const dejaVuEtapeInstall = localStorage.getItem(INSTALL_ETAPE_VUE_KEY) === "1";
+  if (dejaInstallee() || dejaVuEtapeInstall) {
+    afficherGateLicence();
+  } else {
+    afficherEtapeInstall();
+  }
+}
+initEcranAccueil();
 </script>
 </body>
 </html>

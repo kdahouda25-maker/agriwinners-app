@@ -1,6 +1,6 @@
 // Service worker Boost Agriculture — mise en cache pour usage hors connexion.
 // Incrémente CACHE_NAME à chaque mise à jour de contenu pour forcer le rafraîchissement.
-const CACHE_NAME = "boostagri-v2";
+const CACHE_NAME = "boostagri-v4";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
